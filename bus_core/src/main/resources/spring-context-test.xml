@@ -1,0 +1,167 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<beans xmlns="http://www.springframework.org/schema/beans"
+	xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:p="http://www.springframework.org/schema/p"
+	xmlns:context="http://www.springframework.org/schema/context"
+	xmlns:jaxws="http://cxf.apache.org/jaxws" xmlns:jaxrs="http://cxf.apache.org/jaxrs"
+	xmlns:aop="http://www.springframework.org/schema/aop" xmlns:tx="http://www.springframework.org/schema/tx"
+	xsi:schemaLocation="http://www.springframework.org/schema/beans 
+	    http://www.springframework.org/schema/beans/spring-beans-4.1.xsd
+		http://cxf.apache.org/jaxws 
+		http://cxf.apache.org/schemas/jaxws.xsd
+		http://cxf.apache.org/jaxrs 
+		http://cxf.apache.org/schemas/jaxrs.xsd
+		http://www.springframework.org/schema/tx 
+		http://www.springframework.org/schema/tx/spring-tx-4.1.xsd
+		http://www.springframework.org/schema/context 
+		http://www.springframework.org/schema/context/spring-context-4.1.xsd
+		http://www.springframework.org/schema/aop 
+		http://www.springframework.org/schema/aop/spring-aop-4.1.xsd">
+
+	<import resource="classpath:META-INF/cxf/cxf.xml" />
+	<import resource="classpath:META-INF/cxf/cxf-servlet.xml" />
+	<import resource="classpath:services.xml" />
+	
+	<context:annotation-config />
+
+	<context:component-scan base-package="com.bus.**.services.impl" />
+	
+	<context:component-scan base-package="com.bus.**.test" />
+
+	<!-- 通过JNDI配置数据源
+	<bean id="dataSource" class="org.springframework.jndi.JndiObjectFactoryBean">
+		<property name="jndiName">
+			<value>java:comp/env/jdbc/bus</value>
+		</property>
+	</bean>   -->
+	
+	<!-- 测试用的数据源  -->
+	<bean id="dataSource" class="org.springframework.jdbc.datasource.DriverManagerDataSource" >  
+    <property name="driverClassName" value="com.mysql.jdbc.Driver" />  
+    <property name="url" value="jdbc:mysql://118.178.234.162:3306/xcc_dev?characterEncoding=UTF-8" />  
+    <property name="username" value="root" />  
+    <property name="password" value="xms1993" />      
+    </bean>  
+    
+    
+	<!-- 通过注解的方式配置事务 -->
+	<tx:annotation-driven />
+
+	<!-- 配置事务 -->
+	<bean id="transactionManager"
+		class="org.springframework.jdbc.datasource.DataSourceTransactionManager">
+		<property name="dataSource" ref="dataSource" />
+	</bean>
+
+	<bean id="sqlSessionFactory" class="org.mybatis.spring.SqlSessionFactoryBean">
+		<property name="dataSource" ref="dataSource" />
+		<property name="mapperLocations" value="classpath*:com/bus/dao/impl/*.xml" />
+		<property name="plugins">
+			<bean class="com.bus.core.interceptor.PaginationInterceptor" />
+		</property>
+	</bean>
+	
+	<bean id="sqlSessionTemplate" class="org.mybatis.spring.SqlSessionTemplate" destroy-method="close" scope="prototype">
+		<constructor-arg index="0" ref="sqlSessionFactory" />
+	</bean>
+
+	<bean class="org.mybatis.spring.mapper.MapperScannerConfigurer">
+		<property name="basePackage" value="com.bus.**.dao" />
+		<property name="sqlSessionFactory" ref="sqlSessionFactory" />
+	</bean>
+
+	<bean id="jsonProvider" class="org.codehaus.jackson.jaxrs.JacksonJsonProvider" />
+
+	<bean id="privilegeInterceptor" class="com.bus.core.interceptor.CxfPrivilegeInterceptor">
+	<!-- 	<constructor-arg value="receive" />  -->
+	</bean>
+	
+	<!-- 异常处理配置开始 -->
+	<bean id="exceptionHandlerChain" class="com.bus.exception.handler.ExceptionHandlerChain">
+		<property name="chain">
+			<list>
+				<bean id="logBackExceptionHandler" class="com.bus.exception.handler.LogBackExceptionHandler">
+					<property name="level" value="3" />
+				</bean>
+				<!--如果配置了mongodb异常处理resolver,则需要配置mongodb-context.xml,否则不需要
+				<bean id="mongoDBExceptionHandler"
+					  class="MongoDBExceptionHandler">
+					<property name="level" value="2" />
+					<property name="asynFlag" value="true" /property>
+				</bean> -->
+			</list>
+		</property>
+	</bean>
+	
+	<!-- thread pool for asyn handle -->
+	<!--如果异常处理resolver没有设置异步处理(asynFlag=true的)的话，不需要配置exceptionHandleExecutor -->
+
+	<bean id="exceptionHandleExecutor" class="org.springframework.scheduling.concurrent.ThreadPoolTaskExecutor">
+		<property name="threadNamePrefix" value="exceptionHandleExecutor" />
+		<property name="corePoolSize" value="20" />
+		<property name="maxPoolSize" value="20" />
+		<property name="queueCapacity" value="100000" />
+	</bean> 
+	
+	<!-- exception manager  -->
+	<bean id="exceptionManager" class="com.bus.exception.api.ExceptionManager">
+		<property name="systemCode" value="ACR" />
+		<property name="ehc" ref="exceptionHandlerChain" />
+		<property name="exceptionHandleExecutor" ref="exceptionHandleExecutor"/>
+	</bean> 
+	
+	<!--切面配置，建议是将切面加在最上层,比如我这里是Controller-->
+	
+	<!-- throw advice -->
+	<bean id="unifiedExceptionThrowsAdvice"
+		  class="com.bus.exception.aop.UnifiedExceptionThrowsAdvice">
+		 <property name="exceptionManager" ref="exceptionManager" />
+	</bean>
+	
+	<!-- aop config -->
+	<aop:config>
+		<aop:pointcut id="unifiedException"
+					  expression="execution(* com.bus.*.services.impl.*.*(..))" /> 
+		<aop:advisor advice-ref="unifiedExceptionThrowsAdvice"
+					 pointcut-ref="unifiedException" />
+	</aop:config>
+	
+	<!-- 异常处理配置结束 -->
+	
+	
+	<!-- 邮箱配置开始 -->
+	
+	<bean id="mailSender" class="org.springframework.mail.javamail.JavaMailSenderImpl">
+        <!-- 服务器 -->
+        <property name="host" value="smtp.mxhichina.com" />
+        <!-- 端口号 -->
+        <property name="port" value="25" />
+        <!-- 用户名 -->
+        <property name="username" value="xumengsi@xccnet.com" />
+        <!--  密码   -->
+        <property name="password" value="xms19931109@xms" />
+        <!-- SMTP服务器验证 -->
+        <property name="javaMailProperties">
+            <props>
+                <!-- 验证身份 -->
+                <prop key="mail.smtp.auth">true</prop>
+           </props>
+        </property>
+    </bean>
+    
+    <bean id="simpleMailMessage" class="org.springframework.mail.SimpleMailMessage">
+        <!-- 发件人email -->
+        <property name="from" value="xumengsi@xccnet.com" />
+
+    </bean>
+
+    <bean id="simpleMail" class="com.bus.mail.Email">
+        <property name="mailSender" ref="mailSender" />
+        <property name="simpleMailMessage" ref="simpleMailMessage" />
+    </bean>
+    
+	<!-- 邮箱配置结束-->
+	
+	
+	
+	
+</beans>

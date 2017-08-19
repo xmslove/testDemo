@@ -1,0 +1,6 @@
+DELETE FROM xcc_imsi_t;
+DELETE FROM xcc_user_t;
+DELETE FROM xcc_user_traffic_t;
+DELETE FROM xcc_share_content_t;
+DELETE FROM xcc_share_profit_mch_t;
+DELETE FROM xcc_share_profit_staff_t;

@@ -1,0 +1,213 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd" >
+<mapper namespace="com.bus.dao.IShareProfitDao" >
+ 
+ <insert id="addMch">
+ insert into xcc_share_profit_mch_t(
+ brand_no,
+ mch_no,
+ mch_name,
+ mch_address,
+ mch_user_name,
+ mch_user_phone,
+ mch_user_openid
+ )values(
+ #{brandNo,jdbcType=VARCHAR},
+ #{mchNo,jdbcType=VARCHAR},
+ #{mchName,jdbcType=VARCHAR},
+ #{mchAddress,jdbcType=VARCHAR},
+ #{mchUserName,jdbcType=VARCHAR},
+ #{mchUserPhone,jdbcType=VARCHAR},
+ #{openid,jdbcType=VARCHAR}
+ )
+ </insert>
+ 
+ <insert id="addStaff">
+  insert into xcc_share_profit_staff_t(
+ mch_no,
+ staff_name,
+ staff_phone,
+ staff_user_openid
+ )values(
+ #{mchNo,jdbcType=VARCHAR},
+ #{staffName,jdbcType=VARCHAR},
+ #{staffPhone,jdbcType=VARCHAR},
+ #{openid,jdbcType=VARCHAR}
+ )
+ </insert>
+ 
+ <insert id="addStaffAndImsi">
+ insert into xcc_share_profit_staff_t(
+ mch_no,
+ staff_name,
+ staff_phone,
+ imsi_id_list,
+ staff_user_openid
+ )values(
+ #{mchNo,jdbcType=VARCHAR},
+ #{staffName,jdbcType=VARCHAR},
+ #{staffPhone,jdbcType=VARCHAR},
+ #{imsi,jdbcType=VARCHAR},
+ #{openid,jdbcType=VARCHAR}
+ )
+ </insert>
+ 
+<select id="findMchMsgByNo" resultType="com.bus.vo.MchMsgVO">
+SELECT
+	id AS id,
+	mch_name AS mchName,
+	mch_user_name AS mchUserName,
+	mch_user_phone AS mchUserPhone,
+	brand_no AS brandNo,
+	mch_no AS mchNo,
+	mch_address AS mchAddress
+FROM
+	xcc_share_profit_mch_t t
+WHERE
+	t.mch_no = #{mchNo}
+</select>
+
+<select id="findMchMsgByName" resultType="com.bus.vo.MchMsgVO">
+SELECT
+	id AS id,
+	mch_name AS mchName,
+	mch_user_name AS mchUserName,
+	mch_user_phone AS mchUserPhone,
+	brand_no AS brandNo,
+	mch_no AS mchNo,
+	mch_address AS mchAddress
+FROM
+	xcc_share_profit_mch_t t
+WHERE
+	t.mch_name = #{mchName}
+</select>
+
+<select id="selectImsi" resultType="Integer">
+select count(*) from xcc_imsi_t where imsi_id = #{imsi};
+</select>
+
+<select id="selectStaff" resultType="Integer">
+select count(*) from xcc_share_profit_staff_t where imsi_id_list = #{imsi};
+</select>
+
+<select id="otherStaff" resultType="Integer">
+select count(*) from xcc_share_profit_staff_t where imsi_id_list = #{imsi} and staff_phone = #{staffPhone};
+</select>
+
+<select id="selectMch" resultType="Integer">
+select count(*) from xcc_share_profit_mch_t where brand_no = #{brandNo} and mch_user_openid = #{openid};
+</select>
+    
+<select id="selectMchMsg" resultType="com.bus.vo.MchMsgVO">
+SELECT
+	id AS id,
+	mch_name AS mchName,
+	mch_user_name AS mchUserName,
+	mch_user_phone AS mchUserPhone,
+	brand_no AS brandNo,
+	mch_no AS mchNo,
+	mch_address AS mchAddress,
+	mch_user_openid AS mchUserOpenid
+FROM
+	xcc_share_profit_mch_t t
+WHERE
+	t.brand_no = #{brandNo}
+AND
+   	t.mch_user_openid = #{openid}
+</select> 
+
+<select id="selectStaffRegister" resultType="Integer">
+select count(*) from xcc_share_profit_staff_t t where t.staff_user_openid = #{openid}
+</select>
+
+<select id="findStaffMsgByOpenid" resultType="com.bus.vo.StaffMsgVO">
+SELECT
+	id AS id,
+	mch_no AS mchNo,
+	staff_name AS staffName,
+	staff_phone AS staffPhone,
+	imsi_id_list AS imsiIdList,
+	staff_user_openid AS staffUserOpenid
+FROM
+	xcc_share_profit_staff_t
+WHERE
+	staff_user_openid = #{openid}        
+</select>
+
+<select id="isValidImsi" resultType="Integer"> 
+select count(*) from xcc_imsi_t where imsi_id = #{imsi}
+</select>
+
+<select id="isStaffMeTiedCard" resultType="com.bus.vo.StaffMsgVO">
+SELECT
+	id AS id,
+	mch_no AS mchNo,
+	staff_name AS staffName,
+	staff_phone AS staffPhone,
+	imsi_id_list AS imsiIdList,
+	staff_user_openid AS staffUserOpenid
+FROM
+	xcc_share_profit_staff_t
+WHERE
+	staff_user_openid = #{openid}
+AND
+    imsi_id_list REGEXP	(#{imsi});
+</select>
+
+<select id="isStaffOtherTiedCard" resultType="com.bus.vo.StaffMsgVO">
+SELECT
+	id AS id,
+	mch_no AS mchNo,
+	staff_name AS staffName,
+	staff_phone AS staffPhone,
+	imsi_id_list AS imsiIdList,
+	staff_user_openid AS staffUserOpenid
+FROM
+	xcc_share_profit_staff_t
+WHERE
+	staff_user_openid != #{openid}
+AND
+    imsi_id_list REGEXP	(#{imsi});
+</select>
+
+<select id="isValidTimeImsi" resultType="Integer">
+SELECT TIMESTAMPDIFF(HOUR,(select t.imsi_re_time from xcc_imsi_t t where t.imsi_id = #{imsi}),NOW()); 
+</select>
+
+<update id="addStaffTiedCard">
+UPDATE xcc_share_profit_staff_t t
+SET t.imsi_id_list = (
+	CASE
+	WHEN t.imsi_id_list IS NULL THEN
+		   #{imsi}
+	WHEN t.imsi_id_list IS NOT NULL THEN
+		   CONCAT_WS(',',t.imsi_id_list,#{imsi})
+	END
+)
+WHERE
+	t.staff_user_openid = #{openid};
+</update>
+
+<select id="findMchNoByOpenid" resultType="String">
+select mch_no from xcc_share_profit_staff_t where staff_user_openid = #{openid}	
+</select>
+
+<insert id="addShareProfit">
+insert into xcc_share_content_t(
+mch_no,
+openid,
+imsi,
+binding_time
+)values(
+#{mchNo,jdbcType=VARCHAR},
+#{openid,jdbcType=VARCHAR},
+#{imsi,jdbcType=VARCHAR},
+NOW()
+)	
+</insert>
+
+<select id="findPackageType" resultType="Integer">
+select card_package_type_id from xcc_user_traffic_t where imsi_id = #{imsi};	 
+</select>
+   
+</mapper>

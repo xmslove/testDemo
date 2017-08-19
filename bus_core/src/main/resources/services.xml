@@ -1,0 +1,37 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<beans xmlns="http://www.springframework.org/schema/beans"
+	xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:jaxrs="http://cxf.apache.org/jaxrs"
+	xsi:schemaLocation="http://www.springframework.org/schema/beans http://www.springframework.org/schema/beans/spring-beans-3.2.xsd
+		http://cxf.apache.org/jaxrs http://cxf.apache.org/schemas/jaxrs.xsd">
+		
+	   <!-- 车载车主接口发布 -->	
+	  <jaxrs:server id="weixin" address="/api">
+		<jaxrs:serviceBeans>
+		  <ref bean="userServiceImpl" />         
+		  <ref bean="appVersionServiceImpl" />
+		  <ref bean="accessTokenServiceImpl" />
+		  <ref bean="illegalServiceImpl" />
+		  <ref bean="testJunitServiceImpl" />
+		</jaxrs:serviceBeans>
+		<jaxrs:providers>
+			<ref bean="jsonProvider" />
+		</jaxrs:providers>
+		<!-- 添加out拦截器 -->
+    <jaxrs:outInterceptors>
+         <ref bean="privilegeInterceptor" />
+    </jaxrs:outInterceptors>
+    <jaxrs:properties>     
+        <!-- 开启MTOM -->
+        <entry key="mtom_enabled" value="true"></entry>  
+    </jaxrs:properties>
+		<jaxrs:features>
+			<bean class="org.apache.cxf.feature.LoggingFeature"></bean>
+			<bean class="org.apache.cxf.transport.common.gzip.GZIPFeature">
+				<property name="threshold">
+					<value>10240</value>
+				</property>
+			</bean>
+		</jaxrs:features>
+	</jaxrs:server>  
+
+</beans>

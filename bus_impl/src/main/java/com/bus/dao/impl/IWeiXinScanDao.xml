@@ -1,0 +1,186 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd" >
+<mapper namespace="com.bus.dao.IWeiXinScanDao" >
+ 
+ <select id="getUserInfo" resultType="com.bus.vo.ismiUserVO">
+  select 
+  t.id as id,
+  t.imsi_id as imsiId, 
+  t.imei as imei,
+  t.bus_type as busType,
+  t.user_phone as userPhone,
+  t.status as status,
+  t.imsi_re_time as imsiretime
+  from xcc_imsi_t t 
+  where t.imsi_id = #{imsi} and
+  t.user_phone = #{phone}
+ </select>
+ 
+ <select id="selectPackageType" resultType="com.bus.vo.PackageVO">
+ SELECT
+	t.package_type as packageType,
+	t.package_name as packageName,
+	t.package_price as packagePrice,
+	t.package_status as packageStatus,
+	t.traffic_ceiling as trafficCeiling,
+	t.wifi_ceiling as wifiCeiling,
+	t.day_ceiling as dayCeiling,
+	tt.if_download as ifDownload, 
+	tt.if_video as ifVideo,
+	tt.if_webpage as ifWebpage,
+	tt.max_user_num as maxUser,
+	tt.upload_speed as uploadSpeed,
+	tt.download_speed as downloadSpeed
+FROM
+	xcc_package_msg_t t
+LEFT JOIN xcc_package_limiting_t tt ON t.package_type = tt.package_type
+where t.package_type = #{packageType}
+ </select>
+ 
+ <update id="addUserPackage">
+  update xcc_user_traffic_t t
+  set
+  t.card_package_type_id = #{packageType},
+  t.failure_time = date_add(NOW(),interval #{dayCeiling} MONTH),
+  t.wifi_length = #{wifiCeiling},
+  t.pay_play_time = NOW()
+  where t.imsi_id = #{imsi_id}
+ </update>
+ 
+ <select id="getUserPackageMsg" resultType="com.bus.vo.UserPackageVO">
+ select 
+ tt.package_name as packageName,
+ t.failure_time as packageFailureTime,
+ t.imsi_id as imsi
+ from xcc_user_traffic_t t
+ LEFT JOIN xcc_package_msg_t tt
+ ON t.card_package_type_id = tt.package_type
+ WHERE t.card_package_type_id = #{packageType} and t.imsi_id = #{imsi_id}
+ </select>
+ 
+ <insert id="playOrder">
+ insert into xcc_buy_history_t(
+ pay_imsi_id,
+ pay_package_type,
+ pay_type,
+ pay_time,
+ pay_money,
+ order_no
+ )values(
+ #{imsi_id,jdbcType=VARCHAR},
+ #{packageType,jdbcType=NUMERIC},
+ 1,
+ NOW(),
+ #{packagePrice,jdbcType=VARCHAR},
+ #{orderNo,jdbcType=VARCHAR}
+ )
+ </insert>
+ 
+ <insert id="otherPlayOrder">
+ insert into xcc_buy_history_t(
+ pay_imsi_id,
+ pay_package_type,
+ pay_type,
+ pay_time,
+ pay_money,
+ order_no,
+ other_pay_openid
+ )values(
+ #{imsi_id,jdbcType=VARCHAR},
+ #{packageType,jdbcType=NUMERIC},
+ 2,
+ NOW(),
+ #{packagePrice,jdbcType=VARCHAR},
+ #{orderNo,jdbcType=VARCHAR},
+ #{openid,jdbcType=VARCHAR}
+ )
+ </insert>
+ 
+ <select id="getAllPackage" resultType="com.bus.vo.PackageVO">
+  SELECT
+	t.package_type as packageType,
+	t.package_price as packagePrice,
+	t.traffic_ceiling as trafficCeiling,
+	t.day_ceiling as dayCeiling,
+	t.package_status as packageStatus,
+	t.package_name as packageName,
+	t.wifi_ceiling as wifiCeiling,
+	t.package_photo as packagePhoto,
+	tt.if_video as ifVideo,
+	tt.if_download as ifDownload,
+	tt.if_webpage as ifWebpage,
+	tt.upload_speed as uploadSpeed,
+	tt.download_speed as downloadSpeed,
+	tt.max_user_num as maxUser
+FROM
+	xcc_package_msg_t t
+LEFT JOIN xcc_package_limiting_t tt ON t.package_type = tt.package_type
+WHERE
+	t.package_type != 0
+AND t.package_status = 1
+ </select>
+ 
+ <select id="getPackageMsg" resultType="com.bus.vo.PackageVO">
+   SELECT
+	t.package_type as packageType,
+	t.package_price as packagePrice,
+	t.traffic_ceiling as trafficCeiling,
+	t.day_ceiling as dayCeiling,
+	t.package_status as packageStatus,
+	t.package_name as packageName,
+	t.wifi_ceiling as wifiCeiling,
+	t.package_photo as packagePhoto,
+	tt.if_video as ifVideo,
+	tt.if_download as ifDownload,
+	tt.if_webpage as ifWebpage,
+	tt.upload_speed as uploadSpeed,
+	tt.download_speed as downloadSpeed,
+	tt.max_user_num as maxUser
+FROM
+	xcc_package_msg_t t
+LEFT JOIN xcc_package_limiting_t tt ON t.package_type = tt.package_type
+WHERE
+	t.package_type = #{packageType}
+ </select>
+ 
+ <update id="editOrderNo">
+ update xcc_buy_history_t t 
+ set 
+ t.order_status = 2
+ where t.order_no = #{orderNo}
+ </update>
+ 
+<select id="findPackageTypeByOrder" resultType="Integer">
+ select t.pay_package_type from xcc_buy_history_t t where t.order_no = #{orderNo}
+</select>
+
+
+<select id="getOtherTime" resultType="java.util.Date">
+ select t.pay_time from xcc_buy_history_t t where t.order_no = #{orderNo}
+</select>
+
+<select id="isPay" resultType="Integer">
+select count(*) from xcc_user_traffic_t where imsi_id = #{imsi_id}
+</select>
+
+<insert id="addIllegalMsg">
+	insert into xcc_Illegal_t(
+		openid,
+		imsi,
+		classno,
+		hphm,
+		engineno
+    )values(
+		#{openid},
+		#{imsi},
+		#{classno},
+		#{hphm},
+		#{engineno}
+	)	
+</insert>
+
+<select id="getIIllegalImsi" resultType="String">
+select imsi from xcc_Illegal_t where openid = #{openid}	
+</select>
+ 
+</mapper>

@@ -1,0 +1,98 @@
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+  <modelVersion>4.0.0</modelVersion>
+  <parent>
+    <groupId>com.bus.root</groupId>
+    <artifactId>bus_parent</artifactId>
+    <version>0.0.1-SNAPSHOT</version>
+  </parent>
+  <groupId>bus</groupId>
+  <artifactId>bus</artifactId>
+  <packaging>war</packaging>
+  <name>bus</name>
+  <description>web层</description>
+  
+  <dependencies>
+  
+   <dependency>
+   <groupId>bus_api</groupId>
+   <artifactId>bus_api</artifactId>
+   <version>1.0</version>
+   </dependency>
+   
+   <dependency>
+   <groupId>bus_impl</groupId>
+   <artifactId>bus_impl</artifactId>
+   <version>1.0</version>
+   </dependency>
+   
+   <dependency>
+   <groupId>bus_core</groupId>
+   <artifactId>bus_core</artifactId>
+   <version>1.0</version>
+   </dependency>
+   
+   <dependency>
+   <groupId>bus_exception</groupId>
+   <artifactId>bus_exception</artifactId>
+   <version>1.0</version>
+   </dependency>
+   
+   <dependency>
+   <groupId>bus_plug</groupId>
+   <artifactId>bus_plug</artifactId>
+   <version>1.0</version>
+   </dependency>
+  
+  </dependencies>
+  
+  
+  
+  <build>
+  <finalName>bus</finalName>
+  <plugins>  
+  <plugin>
+            <groupId>org.apache.maven.plugins</groupId>
+            <artifactId>maven-war-plugin</artifactId>
+            <version>2.1.1</version>
+            <configuration>
+                <!-- <webXml>src/main/WebContent/WEB-INF/web.xml</webXml> -->
+            </configuration>
+  </plugin>
+  <plugin>
+				<groupId>org.apache.maven.plugins</groupId>
+				<artifactId>maven-compiler-plugin</artifactId>
+				<version>2.3.2</version>
+				<configuration>
+					<source>1.7</source>
+					<target>1.7</target>
+					<!-- <executable>E:\javaDEV\jdk1.6\bin</executable> -->
+				</configuration>
+			</plugin>
+  <plugin>
+				<groupId>org.apache.maven.plugins</groupId>
+				<artifactId>maven-resources-plugin</artifactId>
+				<version>2.7</version>
+				<configuration>
+					<encoding>UTF-8</encoding>
+					<!-- 过滤后缀为p12、crt的证书文件 -->
+					<nonFilteredFileExtensions>
+						<nonFilteredFileExtension>p12</nonFilteredFileExtension>
+						<nonFilteredFileExtension>crt</nonFilteredFileExtension>
+					</nonFilteredFileExtensions>
+				</configuration>
+			</plugin>
+  </plugins>
+  <resources>
+			<resource>
+				<directory>src/main/resources</directory>
+				<includes>
+					<include>**/*.properties</include>
+					<include>**/*.xml</include>
+					<include>**/*.p12</include>
+				</includes>
+				<filtering>true</filtering>
+			</resource>
+		</resources>
+  </build>
+  
+</project>

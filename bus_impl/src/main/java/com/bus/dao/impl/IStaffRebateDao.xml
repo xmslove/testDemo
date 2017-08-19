@@ -1,0 +1,58 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd" >
+<mapper namespace="com.bus.dao.IStaffRebateDao" >
+ 
+<select id="findCardList" resultType="com.bus.vo.RebateVO">
+SELECT
+	t.openid AS openid,
+	GROUP_CONCAT(t.id) AS id
+FROM
+	xcc_share_content_t t
+WHERE
+	t.if_staff_rebate = 1
+AND t.binding_time BETWEEN DATE_SUB(
+	DATE_FORMAT(NOW(), '%Y-%m-%d 22:00:00'),
+	INTERVAL 1 DAY
+)
+AND DATE_FORMAT(NOW(), '%Y-%m-%d 22:00:00')
+GROUP BY
+	t.openid
+</select> 
+
+<update id="updateRebateStatus">
+update 
+xcc_share_content_t t set 
+t.if_staff_rebate = 2 
+where t.id = #{id}  
+</update>
+
+<select id="findStaffList" resultType="com.bus.vo.RebateVO">
+SELECT
+	t.mch_no as mchNo,
+	GROUP_CONCAT(t.id) AS id
+FROM
+	xcc_share_content_t t
+WHERE
+	t.if_mch_rebate = 1
+AND date_format(t.binding_time, '%Y-%m') = date_format(now(), '%Y-%m')
+GROUP BY
+	t.mch_no;	
+</select>
+
+<select id="staffNum" resultType="int">
+select count(*) from xcc_share_profit_staff_t where mch_no = #{mchNo};
+</select>
+
+<select id="findMch" resultType="String">
+select mch_user_openid from xcc_share_profit_mch_t where mch_no = #{mchNo};
+</select>
+
+
+<update id="updateMchRebateStatus">
+update 
+xcc_share_content_t t set 
+t.if_mch_rebate = 2 
+where t.id = #{id}  
+</update>
+   
+</mapper>

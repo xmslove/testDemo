@@ -1,0 +1,100 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd" >
+<mapper namespace="com.bus.dao.IIllegalDao" >
+
+<select id="isIllegal" resultType="com.bus.vo.IllegalMsgVO">
+	select
+	id as id, 
+	classno as classno,
+	hphm as hphm,
+	engineno as engineno
+	from xcc_Illegal_t t
+	where t.imsi = #{imsi}
+</select>
+
+<insert id="moveLine">
+	insert into xcc_trajectory_t(
+	imsi,
+	time,
+	trajectory_lng,
+	trajectory_lat
+	)values
+	<foreach collection ="MoveLineList" item="item" index= "index" separator =",">
+	(
+	#{imsi},
+	#{item.time},
+	#{item.lng},
+	#{item.lat}
+	)
+	</foreach>
+	;
+</insert>
+
+<select id="getAllLine" resultType="com.bus.vo.LineVO">
+	SELECT
+	t.trajectory_lat AS lat,
+	t.trajectory_lng AS lng
+FROM
+	xcc_trajectory_t t
+WHERE
+	t.imsi = #{imsi} 
+AND DATE_FORMAT(t.time, '%Y-%m-%d') = #{startDate}
+</select>
+
+<insert id="uploadPhoto">
+  insert into xcc_navigation_t(
+  imsi,
+  url,
+  upload_time,
+  type
+  )values(
+  #{imsi},
+  #{key},
+  NOW(),
+  1
+  )	
+</insert>
+
+
+<insert id="uploadVide">
+  insert into xcc_navigation_t(
+  imsi,
+  url,
+  upload_time,
+  type
+  )values(
+  #{imsi},
+  #{key},
+  NOW(),
+  2
+  )	
+</insert>
+
+<select id="getPhoto" resultType="com.bus.vo.PhotoVO" >
+SELECT
+	t.url as photoUrl,
+	t.upload_time as photoOp
+FROM
+	xcc_navigation_t t where t.type = 1 and t.imsi = #{imsi}
+ORDER BY
+	t.upload_time DESC
+LIMIT 0,
+ 1
+</select>
+
+<select id="getVoide" resultType="String">
+SELECT
+	t.url
+FROM
+	xcc_navigation_t t where t.type = 2 and t.imsi = #{imsi}
+ORDER BY
+	t.upload_time DESC
+LIMIT 0,
+ 1	
+</select>
+
+<delete id="removeIllegal">
+ delete from xcc_Illegal_t where id = #{id} 	
+</delete>
+    
+</mapper>

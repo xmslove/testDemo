@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd" >
+<mapper namespace="com.bus.dao.IAppVersionDao" >
+
+<select id="getAppVersion" resultType="com.bus.vo.AppVersionVO">
+select
+    t.id as id,
+    t.app_version as version,
+    CASE t.app_version WHEN #{version} THEN 3  
+    ELSE t.app_upgrade_type END as updateStatus,    
+    t.app_download_url  as downloadUrl
+    from xcc_app_version_t t 
+</select>
+    
+</mapper>

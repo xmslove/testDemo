@@ -1,0 +1,252 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd" >
+<mapper namespace="com.bus.dao.IActivationDao" >
+ 
+ <insert id="addUser">
+  insert into xcc_user_t(
+  phone,
+  uuid,
+  weixin_opend_id
+  )values(
+  #{phone,jdbcType=VARCHAR},
+  #{uuid,jdbcType=VARCHAR},
+  #{openid,jdbcType=VARCHAR}
+  );
+ </insert>
+ 
+ <select id="findUser" resultType="Integer">
+ select count(*) from xcc_user_t t where t.phone = #{phone} and t.weixin_opend_id = #{openid};
+ </select>
+ 
+ <insert id="addImsiMsg">
+  insert into xcc_imsi_t(
+  imsi_id,
+  imei,
+  user_phone,
+  imsi_re_time
+  )values(
+  #{imsi,jdbcType=VARCHAR},
+  #{imei,jdbcType=VARCHAR},
+  #{phone,jdbcType=VARCHAR},
+  NOW()
+  );
+ </insert>
+ 
+ <insert id="addUserPackage">
+ insert into xcc_user_traffic_t(
+ imsi_id,
+ failure_time,
+ pay_play_time,
+ card_package_type_id
+ )values(
+   #{imsi,jdbcType=VARCHAR},
+   date_add(NOW(), interval #{day} MONTH),
+   NOW(),
+   #{packageType,jdbcType=NUMERIC}
+ );
+ </insert>
+ 
+ <select id="getDefaultPackage" resultType="com.bus.vo.PackageVO">
+   SELECT
+	t.package_type as packageType,
+	t.package_name as packageName,
+	t.package_price as packagePrice,
+	t.package_status as packageStatus,
+	t.traffic_ceiling as trafficCeiling,
+	t.wifi_ceiling as wifiCeiling,
+	t.day_ceiling as dayCeiling,
+	tt.if_download as ifDownload, 
+	tt.if_video as ifVideo,
+	tt.if_webpage as ifWebpage,
+	tt.max_user_num as maxUser,
+	tt.upload_speed as uploadSpeed,
+	tt.download_speed as downloadSpeed
+FROM
+	xcc_package_msg_t t
+LEFT JOIN xcc_package_limiting_t tt ON t.package_type = tt.package_type
+WHERE t.package_type = 0
+ </select>
+ 
+ 
+ <select id="getOrderNo" resultType="Integer">
+      SELECT NEXTVAL('orderNo');
+  </select>
+ 
+  <select id="getMchNo" resultType="Integer">
+      SELECT NEXTVAL('mchNo');
+  </select>
+  
+  <select id="vildPhone" resultType="Integer">
+   select count(*) from xcc_imsi_t t where (t.user_phone = #{phone} and t.imsi_id = #{imsi}) or t.imsi_id = #{imsi};
+  </select>
+  
+  <select id="toActivate" resultType="Integer">
+  select count(*) from xcc_imsi_t t where t.imsi_id = #{imsi} ;
+  </select>
+  
+  <select id="getUserInfo" resultType="com.bus.vo.UserInfoVO">
+   SELECT
+	t.imsi_id as imsi,
+	t.imei as imei,
+	t.bus_type as busType,
+	t.user_phone as userPhone,
+	t.imsi_re_time as imsireTime,
+	tt.wifi_length as wifiLength,
+	tt.apply_traffic_num as trafficNum,
+	tt.card_package_type_id as packageType,
+	tt.pay_play_time as payPlayTime,
+	(
+		SELECT
+			to_days(
+				(
+					SELECT
+						ts.failure_time
+					FROM
+						xcc_user_traffic_t ts
+					WHERE
+						ts.imsi_id = #{imsi}
+				)
+			) - to_days(now())
+	) as packageDay,
+	(
+		SELECT
+			ttt.package_name
+		FROM
+			xcc_package_msg_t ttt
+		WHERE
+			ttt.package_type = tt.card_package_type_id
+	)  as packageName
+FROM
+	xcc_imsi_t t
+LEFT JOIN xcc_user_traffic_t tt ON t.imsi_id = tt.imsi_id
+WHERE
+	t.imsi_id = #{imsi} 
+  </select>
+  
+  <select id="getUserPhone" resultType="String">
+  select user_phone from xcc_imsi_t where imsi_id= #{imsi}
+  </select>
+    
+   <update id="addUserTraffic">
+   	update xcc_user_traffic_t t set t.apply_traffic_num = #{vo.trafficNum},t.wifi_length = #{vo.wifiLength} where t.imsi_id = #{imsi};
+   </update>
+   
+   <select id="userPayTime" resultType="java.util.Date">
+   	select pay_play_time from xcc_user_traffic_t where imsi_id = #{imsi};
+   </select>
+   
+   <select id="selectUserPackageType" resultType="Integer">
+   	select card_package_type_id from xcc_user_traffic_t where imsi_id = #{imsi};
+   </select>
+   
+   <select id="userIsVoide" resultType="String">
+   	select if_video from xcc_package_limiting_t where package_type = #{packageType};
+   </select>
+   
+   <select id="getUserTrafficInfo" resultType="com.bus.vo.UserInfoVO">
+   	select 
+   	apply_traffic_num as trafficNum,
+   	wifi_length as wifiLength
+   	from xcc_user_traffic_t 
+   	where imsi_id = #{imsi}
+   </select>
+   
+   <select id="getAppVersion" resultType="String">
+   	select app_version from  xcc_app_version_t
+   </select>
+   
+   <select id="getImsi" resultType="String">
+   	select t.imsi_id from xcc_imsi_t t where t.user_phone = (select tt.phone from xcc_user_t tt where tt.weixin_opend_id = #{openid})
+   </select>
+   
+   <delete id="deleteUser">
+   	delete from xcc_user_t where weixin_opend_id = #{openid}
+   </delete>
+   
+    <delete id="deleteImsi">
+   	delete from xcc_imsi_t where imsi_id = #{imsi}
+   </delete>  
+   
+   <delete id="deleteUserMsg">
+   	delete from xcc_user_traffic_t where imsi_id = #{imsi}
+   </delete>
+   
+   <delete id="deleteMch">
+   	delete from xcc_share_profit_mch_t where mch_user_openid = #{openid}
+   </delete>
+   
+   <delete id="deleteStaff">
+   	delete from xcc_share_profit_staff_t where staff_user_openid = #{openid}
+   </delete>
+   
+    <delete id="deleteMoney">
+   	delete from xcc_share_content_t where openid = #{openid}
+   </delete>
+   
+   <select id="isUserActivation" resultType="com.bus.vo.UserInfoVO">
+   	SELECT
+	t.weixin_opend_id as openid
+FROM
+	xcc_user_t t
+WHERE
+	t.phone = (
+		SELECT
+			tt.user_phone
+		FROM
+			xcc_imsi_t tt
+		WHERE
+			tt.imsi_id = #{imsi}
+	)
+   </select>
+   
+   <select id="isTheAnnualFee" resultType="Integer">
+   	SELECT
+   	card_package_type_id as packageType
+   	FROM xcc_user_traffic_t 
+   	WHERE
+   	imsi_id = #{imsi}
+   </select>
+   
+   <select id="findFailureDate" resultType="java.util.Date">
+   	select failure_time from xcc_user_traffic_t where imsi_id = #{imsi}
+   </select>
+   
+   <update id="editUserTrafficStatus">
+   	UPDATE xcc_user_traffic_t t
+    SET t.package_status = 2
+    WHERE
+	t.imsi_id = #{imsi};
+   </update>
+	
+   <insert id="appUpload">
+   	insert into xcc_app_upload_t(
+	imsi,
+	imei,
+	app_name,
+	app_package_name,
+	app_trafficExpend,
+	app_upload_time
+	)values
+	<foreach collection ="avList" item="item" index= "index" separator =",">
+	(
+	#{imsi},
+	#{imei},
+	#{item.appName},
+	#{item.appPackageName},
+	#{item.appTrafficExpend},
+	#{appUploadTime}
+	)
+	</foreach>
+   </insert>
+   
+   <insert id="testRollbackDataResouse">
+   	insert into xcc_traffic_record_t(
+   	iccid,
+   	msg
+   	)values(
+   	'test123',
+   	'test123'
+   	)
+   </insert>
+   
+</mapper>
