@@ -1,0 +1,74 @@
+public class PrivilegeSyncServlet{
+	
+	@Resource
+	private ICacheService cacheService;
+	@Resource
+	private IPrivilegeSynchronizationService privilegeSynchronizationService;
+
+	@SuppressWarnings("rawtypes")
+	public void obtainJarFileWithClassLoader() throws Exception {
+		    String packageName = "com.rems";
+		    Set<String> ppp = new HashSet<String>();
+		try {
+			ClassLoader loader = Thread.currentThread().getContextClassLoader();
+			String path = packageName.replace('.', '/');
+			Enumeration<URL> urls = loader.getResources(path);
+			List<Class> classes = new ArrayList<Class>();
+			while (urls.hasMoreElements()) {
+				URL url = urls.nextElement();
+				URLConnection connection = url.openConnection();
+				// 使用父类URLConnection可以做一些简单的操作，
+				// 但是这里要做jar复杂一点的操作，明显不够用，所以转成JarURLConnection
+				if (connection instanceof JarURLConnection) {
+					JarURLConnection jarConn = (JarURLConnection) connection;
+					JarFile jarFile = jarConn.getJarFile(); // 获取jar包
+					// 获取jar包下的文件，并加载资源
+					Enumeration<JarEntry> entrys = jarFile.entries();
+					while (entrys.hasMoreElements()) {
+						JarEntry entry = entrys.nextElement();
+						String jarEntryName = entry.getName();
+						if (!entry.isDirectory()) {
+						// 这里我们需要过滤不是class文件和不在basePack包名下的类
+							if (jarEntryName.contains(".class")
+									&& jarEntryName.replaceAll("/", ".")
+											.startsWith(packageName)) {
+								String className = jarEntryName.substring(0,
+										jarEntryName.lastIndexOf(".")).replace(
+										"/", ".");
+								Class cls = Class.forName(className);
+								classes.add(cls);
+							}
+						}
+					};
+					for (Class clas : classes) {
+						Method[] methods = clas.getMethods();
+						for (Method method : methods) {
+							OperationSource operationSource = method.getAnnotation(OperationSource.class);
+							if (operationSource != null) {
+								ppp.add(operationSource.code()+"-"+operationSource.operation());
+							};
+						};
+					};
+				};
+			};
+			privilegeSynchronization(ppp);
+		} catch (IOException e) {
+			e.printStackTrace();
+		}
+	};
+	
+	private void privilegeSynchronization(Set<String> pl) throws Exception {
+		List<PrivilegeVO> ps = new ArrayList<PrivilegeVO>();
+		for (String string : pl) {
+			PrivilegeVO vo = new PrivilegeVO();
+			List<String> result = Arrays.asList(StringUtils.split(string,"-"));
+			vo.setCode(result.get(0));
+			vo.setOperation(result.get(1));
+			ps.add(vo);
+		}
+		cacheService.remove(RedisKeyConstant.PRIVILEGE_KEY);
+		cacheService.set(RedisKeyConstant.PRIVILEGE_KEY, ps, 0);
+		privilegeSynchronizationService.initSynchronization(ps);
+	}
+
+}
